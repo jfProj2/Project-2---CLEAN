@@ -26,7 +26,7 @@ void run_editor(const char * fileptr);
 string get_filename(const char * fileptr);
 void file_to_screen(string data, WINDOW * win, int h, int w);
 int show_menu_window(int menu_h, int menu_w, int menu_y, int menu_x);
-string add_char(char ch, string data);
+string add_char(WINDOW* win, int& x, int& y,int ch, string data);
 string remove_char(string s);
 void save_file(string filename, string data);
 bool file_exists(const char * fileptr);
@@ -280,7 +280,7 @@ string get_filename(const char * fileptr){
 }
 
 string load_file(string filename){
-  int fd = open(filename.c_str(), O_RDWR | /*O_CREAT |*/ O_APPEND);
+  int fd = open(filename.c_str(), O_RDWR | O_APPEND /*| O_CREAT, S_IRWXU*/);
   if(fd < 0){
     //int errorNum = errno;
     //error window
@@ -332,6 +332,8 @@ void run_editor(const char *fileptr){
   term_win = newwin(term_h, term_w, 0, 0);
   edit_win = derwin(term_win, edit_h, edit_w, edit_x, edit_y);
 
+  int ex = 2;
+  int ey = 2;
   //FIGURE OUT PADS?
   //edit_win = newpad(edit_h,edit_w);
 
@@ -352,9 +354,14 @@ void run_editor(const char *fileptr){
   bool running = true;
   string appended = "";
   while(running){
+    refresh();
     bool saved = false;
     key = wgetch(edit_win);
-    text = add_char(key, text);
+    text = add_char(edit_win,ex, ey,key, text);
+    //getyx(edit_win, ey, ex);
+    //wmove(edit_win,ey, ex);
+    refresh();
+    wrefresh(edit_win);
     file_to_screen(text, edit_win, edit_h, edit_w);
 
     switch(key){
@@ -402,30 +409,64 @@ void run_editor(const char *fileptr){
 
 
 
-string add_char(char ch, string s){
+string add_char(WINDOW * win, int& x, int& y, int ch, string s){
+  //getyx(win, y, x);
+  int max_x, max_y;
+  getmaxyx(win, max_y, max_x);
+  // mvwprintw(win,
   string data = "";
   int len = s.size();
-  if(ch == 127){
+  if(ch == 127 || ch == 8){
     if(len > 0){
       data += remove_char(s);
+      }
     }
+    else if(ch == KEY_DOWN){
+      if(y < max_y -1){
+	y++;
+      }
+	wmove(win, y, x);
+	data = s;
+    } else if(ch == KEY_UP){
+      if(y > 2){
+	y--;
+      }
+      wmove(win, y, x);
+      data = s;
+    } else if(ch == KEY_LEFT){
+      // wmove(win, y, x-1);
+      if(x > 2){
+	x--;
+       }
+       wmove(win, y, x);
+       data = s;
+    } else if(ch == KEY_RIGHT){
+      	if(x < max_x - 1){
+	x++;
+	}
+	wmove(win, y, x);
+      data = s;
   } else {
-    data = s + ch;
+    data = s + (char)ch;
   }
+  move(y, x);
   return data;
+
 }
 
 string remove_char(string s){
-  string data = "";
+  /* string data = "";
   for(unsigned int i = 0; i < (s.size() - 1); i++){
     data[i] += s[i];
   }
-  s += '\b';
-  return s;
+   data += '\b';
+   return data;*/
+  string data = s.substr(0,s.size()-1);
+  data += '\b';
+  return data;
 }
 
 int show_menu_window(int menu_h, int menu_w, int menu_y, int menu_x){
-
   WINDOW *menu_win;
   WINDOW *menu_subwin;
   MENU *main_menu;
@@ -528,7 +569,7 @@ bool file_exists(const char * fileptr){
 }
 
 void save_file(string filename, string s){
-  int fd = open(filename.c_str(),O_RDWR, O_TRUNC);
+  int fd = open(filename.c_str(), O_RDWR| O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
   string data = s;
   int n = s.size();
   char * buffer = new char[n];
