@@ -58,7 +58,7 @@ int show_save_window(int save_h, int save_w, int save_y, int save_x){
   set_menu_win(save_menu, save_win);
   set_menu_sub(save_menu, save_subwin);
   set_menu_mark(save_menu, "* ");
-  mvwprintw(save_win, save_y+10, save_x+10,"Do you wish to save the current text?");
+  mvwprintw(save_win, 0, 0,"Do you wish to save the current text?");
   box(save_win, '*', '*');
   wrefresh(save_win);
   cbreak();
@@ -366,9 +366,9 @@ void run_editor(const char *fileptr){
         wrefresh(edit_win);
       }
       else if(selection == 1){
-        int savePrompt = show_save_window(menu_h/2, menu_w/2, menu_y/2, menu_x/2);
+        int savePrompt = show_save_window(menu_h, menu_w, menu_y, menu_x);
         if(savePrompt == 0){ //Do not save
-          filename = show_open_window(menu_h/2, menu_w/2, menu_y/2, menu_x/2);
+          filename = show_open_window(menu_h, menu_w, menu_y, menu_x);
           text = load_file(filename);
           file_to_screen(text, edit_win, edit_h, edit_w);
 
